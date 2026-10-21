@@ -1,12 +1,10 @@
 package network.palace.bungee.commands;
 
-import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.protocol.packet.Chat;
 import network.palace.bungee.PalaceBungee;
 import network.palace.bungee.handlers.PalaceCommand;
 import network.palace.bungee.handlers.Player;

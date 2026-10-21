@@ -121,6 +121,8 @@ public class PalaceBungee extends Plugin {
     @Override
     public void onDisable() {
         if (messageHandler != null) messageHandler.shutdown();
+        if (mongoHandler != null) mongoHandler.stop();
+        if (forumUtil != null) forumUtil.stop();
     }
 
     private void registerListeners() {
