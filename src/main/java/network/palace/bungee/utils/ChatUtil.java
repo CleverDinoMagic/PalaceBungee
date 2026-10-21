@@ -3,7 +3,7 @@ package network.palace.bungee.utils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
@@ -25,7 +25,7 @@ public class ChatUtil {
     private final HashMap<UUID, ChatMessage> messageCache = new HashMap<>();
 
     public ChatUtil() {
-        BungeeCord.getInstance().getScheduler().schedule(PalaceBungee.getInstance(), () -> {
+        ProxyServer.getInstance().getScheduler().schedule(PalaceBungee.getInstance(), () -> {
             List<UUID> toRemove = new ArrayList<>();
             long currentTime = System.currentTimeMillis();
             for (Map.Entry<UUID, ChatAnalysisPacket> entry : analysisPackets.entrySet()) {
@@ -176,7 +176,7 @@ public class ChatUtil {
                     player.getAfkTimers().clear();
                     player.sendMessage(ChatColor.GREEN + "" + ChatColor.BOLD + "Your AFK Timer has been reset!");
                     proxiedPlayer.get().sendTitle(
-                            BungeeCord.getInstance().createTitle()
+                            ProxyServer.getInstance().createTitle()
                                     .title(new ComponentBuilder("Confirmed").color(ChatColor.GREEN).bold(true).create())
                                     .subTitle(new ComponentBuilder("Your AFK Timer has been reset!").color(ChatColor.GREEN).bold(true).create())
                                     .fadeIn(10)

@@ -1,6 +1,6 @@
 package network.palace.bungee.utils;
 
-import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import network.palace.bungee.PalaceBungee;
@@ -65,7 +65,7 @@ public class AFKUtil {
                 try {
                     if (player.isAFK()) {
                         player.getProxiedPlayer().ifPresent(p -> p.sendTitle(
-                                BungeeCord.getInstance().createTitle()
+                                ProxyServer.getInstance().createTitle()
                                         .title(new ComponentBuilder("Are you AFK?").color(ChatColor.RED).bold(true).create())
                                         .subTitle(new ComponentBuilder("AFK kick in ").color(ChatColor.RED)
                                                 .append((5 - i) + " ").color(ChatColor.DARK_RED)

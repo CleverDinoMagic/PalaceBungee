@@ -24,32 +24,25 @@ public class ForumUtil {
     private Random random;
 
     public ForumUtil() throws IOException, SQLException, ClassNotFoundException {
-        Class.forName("com.mysql.jdbc.Driver");
+        Class.forName("org.sqlite.JDBC");
         initialize();
     }
 
     public void initialize() throws IOException, SQLException {
-        ConfigUtil.DatabaseConnection sql = PalaceBungee.getConfigUtil().getSQLInfo();
-
-        // Begin configuration of Hikari DataSource
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mysql://" + sql.getHost() + ":" + sql.getPort() + "/" + sql.getDatabase());
-        config.setUsername(sql.getUsername());
-        config.setPassword(sql.getPassword());
-
-        // See: https://github.com/brettwooldridge/HikariCP/wiki/MySQL-Configuration
-        config.addDataSourceProperty("cachePrepStmts", "true");
-        config.addDataSourceProperty("prepStmtCacheSize", "250");
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-        config.addDataSourceProperty("useServerPrepStmts", "true");
-        config.addDataSourceProperty("useLocalSessionState", "true");
-        config.addDataSourceProperty("rewriteBatchedStatements", "true");
-        config.addDataSourceProperty("cacheResultSetMetadata", "true");
-        config.addDataSourceProperty("cacheServerConfiguration", "true");
-        config.addDataSourceProperty("elideSetAutoCommits", "true");
-        config.addDataSourceProperty("maintainTimeStats", "false");
-
+        java.io.File file = new java.io.File(PalaceBungee.getConfigUtil().getConfig().getString("sqlite.forum-path", "palace-forum.sqlite")).getAbsoluteFile();
+        java.io.File parent = file.getParentFile();
+        if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("Cannot create " + parent);
+        config.setJdbcUrl("jdbc:sqlite:" + file.getAbsolutePath());
+        config.setMaximumPoolSize(1);
+        config.setConnectionInitSql("PRAGMA busy_timeout=10000");
         connectionPool = new HikariDataSource(config);
+        try (Connection connection = connectionPool.getConnection(); java.sql.Statement statement = connection.createStatement()) {
+            statement.execute("PRAGMA journal_mode=WAL");
+            statement.execute("CREATE TABLE IF NOT EXISTS core_members (member_id INTEGER PRIMARY KEY, email TEXT UNIQUE, member_group_id INTEGER)");
+            statement.execute("CREATE TABLE IF NOT EXISTS core_pfields_content (member_id INTEGER PRIMARY KEY, field_2 TEXT, field_3 TEXT, field_4 TEXT)");
+        }
+
     }
 
     public boolean isConnected() {

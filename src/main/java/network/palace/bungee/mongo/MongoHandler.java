@@ -1,7 +1,6 @@
 package network.palace.bungee.mongo;
 
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
+import network.palace.storage.SQLiteStore;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -36,7 +35,7 @@ import java.util.logging.Level;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class MongoHandler {
-    private final MongoClient client;
+    private final SQLiteStore client;
     private final MongoCollection<Document> bansCollection;
     private final MongoCollection<Document> partyCollection;
     @Getter private final MongoCollection<Document> playerCollection;
@@ -52,13 +51,8 @@ public class MongoHandler {
     private final MongoCollection<Document> virtualQueuesCollection;
 
     public MongoHandler() throws IOException {
-        ConfigUtil.DatabaseConnection mongo = PalaceBungee.getConfigUtil().getMongoDBInfo();
-        String hostname = mongo.getHost();
-        String username = mongo.getUsername();
-        String password = mongo.getPassword();
-        MongoClientURI connectionString = new MongoClientURI("mongodb://" + username + ":" + password + "@" + hostname);
-        client = new MongoClient(connectionString);
-        MongoDatabase database = client.getDatabase(mongo.getDatabase());
+        client = new SQLiteStore(new File(PalaceBungee.getConfigUtil().getConfig().getString("sqlite.path", "palace.sqlite")));
+        MongoDatabase database = client.database();
         playerCollection = database.getCollection("players");
         chatCollection = database.getCollection("chat");
         bansCollection = database.getCollection("bans");
