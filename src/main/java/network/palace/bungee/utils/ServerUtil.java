@@ -13,23 +13,29 @@ import network.palace.bungee.messages.packets.DisablePlayerPacket;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerUtil {
     private final Timer updateTimer = new Timer();
-    private final HashMap<String, Server> servers = new HashMap<>();
-    private ServerInfo currentHub;
+    private final Map<String, Server> servers = new ConcurrentHashMap<>();
+    private volatile ServerInfo currentHub;
+    private boolean warnedNoHub;
     @Getter private int onlineCount = 0;
     @Getter private final List<String> onlinePlayerNames = new ArrayList<>();
 
     public ServerUtil() {
         loadServers();
 
-        currentHub = getServerInfo("Hub1", true);
+        updateCurrentHub();
 
         PalaceBungee.getProxyServer().setReconnectHandler(new ReconnectHandler() {
             @Override
             public ServerInfo getServer(ProxiedPlayer proxiedPlayer) {
-                return currentHub;
+                ServerInfo hub = currentHub;
+                Map<String, ServerInfo> registered = ProxyServer.getInstance().getServers();
+                if (hub != null && registered.containsKey(hub.getName())) return registered.get(hub.getName());
+                return HubSelector.fallback(servers, registered,
+                        proxiedPlayer.getPendingConnection().getListener().getServerPriority());
             }
 
             @Override
@@ -61,14 +67,7 @@ public class ServerUtil {
                     PalaceBungee.getProxyServer().getLogger().log(Level.SEVERE, "Error updating online player name list", e);
                 }
                 try {
-                    int currentCount = servers.get(currentHub.getName()).getCount();
-                    for (Server server : servers.values()) {
-                        if (!server.getName().startsWith("Hub")) continue;
-                        if (server.getCount() < currentCount) {
-                            currentCount = server.getCount();
-                            currentHub = getServerInfo(server.getName(), true);
-                        }
-                    }
+                    updateCurrentHub();
                 } catch (Exception e) {
                     PalaceBungee.getProxyServer().getLogger().log(Level.SEVERE, "Error determining currentHub", e);
                 }
@@ -83,6 +82,19 @@ public class ServerUtil {
                 }
             }
         }, 2000L, 5000L);
+    }
+
+    private void updateCurrentHub() {
+        currentHub = HubSelector.select(servers, ProxyServer.getInstance().getServers(), currentHub);
+        if (currentHub == null) {
+            if (!warnedNoHub) PalaceBungee.getProxyServer().getLogger().warning(
+                    "No registered hub is available. Reconnects will use each proxy listener's configured priorities. "
+                    + "Check proxy config.yml servers/listeners and MySQL server records (including testNetwork/playground settings).");
+            warnedNoHub = true;
+        } else if (warnedNoHub) {
+            PalaceBungee.getProxyServer().getLogger().info("Hub routing restored: " + currentHub.getName());
+            warnedNoHub = false;
+        }
     }
 
     public void shutdown() {
