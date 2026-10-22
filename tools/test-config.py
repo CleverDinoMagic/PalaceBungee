@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run configuration regression checks against the sibling Core offline build."""
+"""Run proxy configuration, messaging, and routing checks against the offline build."""
 import os
 import pathlib
 import shutil
@@ -27,5 +27,5 @@ for artifact in (classes, jar):
     if artifact == classes:
         runtime.insert(2, kit / "work/build/Storage")
     cp = os.pathsep.join(map(str, runtime))
-    for test in ('network.palace.bungee.utils.ConfigUtilTest', 'network.palace.bungee.messages.MessageHandlerTest'):
+    for test in ('network.palace.bungee.utils.ConfigUtilTest', 'network.palace.bungee.messages.MessageHandlerTest', 'network.palace.bungee.utils.HubSelectorTest'):
         subprocess.run([java, '-cp', cp, test], check=True)

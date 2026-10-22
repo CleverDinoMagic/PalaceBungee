@@ -58,3 +58,18 @@ Forum linking uses the same MySQL schema by default. To use the forum
 application's separate schema, add a complete `forum-mysql` section with the same
 fields. Its `core_members` and `core_pfields_content` tables must already exist;
 PalaceBungee does not create or alter the forum application schema.
+
+## Hub routing
+
+The proxy chooses the least populated registered online hub from database server
+records (a `Hub` name prefix or `Hub` server type). An eligible current hub is kept
+when counts tie. It also supports proxy-configured `Hub*` entries before database
+records are populated. Servers recorded as offline are excluded.
+
+If no hub is available, each reconnect uses that player's listener `priorities`
+from the proxy's own `config.yml`, skipping missing registrations and servers
+known to be offline. With no eligible destination the reconnect handler returns
+no override, leaving the proxy's normal connection handling in control. A single
+warning identifies missing hub configuration; routing recovers when a hub appears.
+Check `testNetwork` on the proxy and `playground` on Core: a mismatch can filter
+all database server records out. The plugin does not create a backend server.
