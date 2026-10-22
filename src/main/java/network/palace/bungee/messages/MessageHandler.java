@@ -38,15 +38,24 @@ public class MessageHandler {
     private final String clearMessage = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
 
     public MessageHandler() throws IOException, TimeoutException {
-        factory = new ConnectionFactory();
-        ConfigUtil.DatabaseConnection connection = PalaceBungee.getConfigUtil().getRabbitMQInfo();
+        this(PalaceBungee.getConfigUtil().getRabbitMQInfo(), new ConnectionFactory());
+    }
+
+    MessageHandler(ConfigUtil.DatabaseConnection connection, ConnectionFactory factory) throws IOException, TimeoutException {
+        this.factory = factory;
         factory.setVirtualHost(connection.getDatabase());
         factory.setHost(connection.getHost());
+        factory.setPort(connection.getPort());
         factory.setUsername(connection.getUsername());
         factory.setPassword(connection.getPassword());
 
         PUBLISHING_CONNECTION = factory.newConnection();
-        CONSUMING_CONNECTION = factory.newConnection();
+        try {
+            CONSUMING_CONNECTION = factory.newConnection();
+        } catch (IOException | TimeoutException | RuntimeException e) {
+            try { PUBLISHING_CONNECTION.close(); } catch (Exception cleanup) { e.addSuppressed(cleanup); }
+            throw e;
+        }
 
         ((Recoverable) PUBLISHING_CONNECTION).addRecoveryListener(new RecoveryListener() {
             @Override
@@ -86,8 +95,7 @@ public class MessageHandler {
             PROXY_DIRECT = new MessageClient(ConnectionType.PUBLISHING, "proxy_direct", "direct");
             MC_DIRECT = new MessageClient(ConnectionType.PUBLISHING, "mc_direct", "direct");
         } catch (Exception e) {
-            e.printStackTrace();
-            PalaceBungee.getProxyServer().getLogger().severe("There was an error initializing essential message publishing queues!");
+            throw new IOException("Failed to initialize required RabbitMQ publishing queues; verify virtual-host permissions", e);
         }
 
         CancelCallback doNothing = consumerTag -> {
@@ -675,6 +683,10 @@ public class MessageHandler {
             }
         });
         channels.clear();
+        for (Connection connection : new Connection[]{PUBLISHING_CONNECTION, CONSUMING_CONNECTION}) {
+            if (connection == null || !connection.isOpen()) continue;
+            try { connection.close(); } catch (IOException e) { e.printStackTrace(); }
+        }
     }
 
     public void sendMessage(MQPacket packet, MessageClient client) throws IOException {

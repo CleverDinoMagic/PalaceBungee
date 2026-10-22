@@ -84,14 +84,36 @@ public class ConfigUtil {
         }
     }
 
-    public DatabaseConnection getRabbitMQInfo() {
-        try {
-            Configuration config = getConfig().getSection("rabbitmq");
-            return new DatabaseConnection(config.getString("host"), config.getString("username"), config.getString("password"), config.getString("virtualhost"), 0);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new DatabaseConnection("", "", "", "", 0);
+    public DatabaseConnection getRabbitMQInfo() throws IOException {
+        return readRabbitMQInfo(getConfig());
+    }
+
+    public static DatabaseConnection readRabbitMQInfo(Configuration config) {
+        if (!(config.get("rabbitmq") instanceof Configuration))
+            throw new IllegalArgumentException("rabbitmq must be a configuration section in plugins/PalaceBungee/config.yml");
+        List<String> errors = new ArrayList<>();
+        String host = requiredRabbitMQ(config, "host", errors);
+        String username = requiredRabbitMQ(config, "username", errors);
+        String password = requiredRabbitMQ(config, "password", errors);
+        Object virtualHost = config.get("rabbitmq.virtualhost", "/");
+        if (!(virtualHost instanceof String) || ((String) virtualHost).trim().isEmpty())
+            errors.add("rabbitmq.virtualhost must be a non-blank string");
+        Object port = config.get("rabbitmq.port", 5672);
+        if (!(port instanceof Integer) || (Integer) port < 1 || (Integer) port > 65535)
+            errors.add("rabbitmq.port must be an integer between 1 and 65535");
+        if (!errors.isEmpty()) throw new IllegalArgumentException(String.join("; ", errors)
+                + ". Edit plugins/PalaceBungee/config.yml with your existing RabbitMQ broker settings. "
+                + "Messaging is required; no broker credentials are supplied by PalaceBungee.");
+        return new DatabaseConnection(host, username, password, (String) virtualHost, (Integer) port);
+    }
+
+    private static String requiredRabbitMQ(Configuration config, String key, List<String> errors) {
+        Object value = config.get("rabbitmq." + key);
+        if (!(value instanceof String) || ((String) value).trim().isEmpty()) {
+            errors.add("rabbitmq." + key + " must be an explicitly configured, non-blank string");
+            return null;
         }
+        return (String) value;
     }
 
     public DatabaseConnection getMongoDBInfo() {
@@ -124,19 +146,44 @@ public class ConfigUtil {
     }
 
     public Configuration getConfig() throws IOException {
-        return ConfigurationProvider.getProvider(YamlConfiguration.class).load(getConfigFile());
+        return loadConfig(new File("plugins/PalaceBungee/config.yml"));
     }
 
     public File getConfigFile() throws IOException {
-        File folder = new File("plugins/PalaceBungee");
-        if (!folder.exists()) folder.mkdir();
-
-        File file = new File(folder, "config.yml");
-        if (!file.exists()) {
-            file.createNewFile();
-        }
-
+        File file = new File("plugins/PalaceBungee/config.yml");
+        loadConfig(file);
         return file;
+    }
+
+    /** Add visible placeholders to legacy files while preserving operator values. */
+    public static Configuration loadConfig(File file) throws IOException {
+        java.nio.file.Files.createDirectories(file.getAbsoluteFile().getParentFile().toPath());
+        ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
+        Configuration defaults;
+        try (java.io.InputStream input = ConfigUtil.class.getResourceAsStream("/config.yml")) {
+            if (input == null) throw new IOException("Missing bundled PalaceBungee config.yml");
+            if (!file.exists()) {
+                java.nio.file.Files.copy(input, file.toPath());
+                return provider.load(file);
+            }
+            defaults = provider.load(input);
+        }
+        Configuration config = provider.load(file);
+        if (addMissing(config, defaults)) provider.save(config, file);
+        return config;
+    }
+
+    private static boolean addMissing(Configuration config, Configuration defaults) {
+        boolean changed = false;
+        for (String key : defaults.getKeys()) {
+            if (!config.getKeys().contains(key)) {
+                config.set(key, defaults.get(key));
+                changed = true;
+            } else if (config.get(key) instanceof Configuration && defaults.get(key) instanceof Configuration) {
+                changed |= addMissing((Configuration) config.get(key), (Configuration) defaults.get(key));
+            }
+        }
+        return changed;
     }
 
     public void setChatDelay(int seconds) throws Exception {

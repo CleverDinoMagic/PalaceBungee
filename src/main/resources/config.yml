@@ -1,0 +1,13 @@
+# PalaceBungee runs on your BungeeCord-compatible proxy.
+testNetwork: true
+sqlite:
+  path: palace.sqlite
+  forum-path: palace-forum.sqlite
+# Required: enter your existing broker credentials, then restart the proxy.
+# Use the same broker and virtual host as your Core servers.
+rabbitmq:
+  host: ''
+  port: 5672
+  username: ''
+  password: ''
+  virtualhost: '/'

@@ -74,6 +74,11 @@ public class PalaceBungee extends Plugin {
 
         configUtil = new ConfigUtil();
         try {
+            configUtil.getRabbitMQInfo();
+        } catch (IOException | IllegalArgumentException e) {
+            throw new IllegalStateException("Cannot enable PalaceBungee: " + e.getMessage(), e);
+        }
+        try {
             testNetwork = configUtil.isTestNetwork();
         } catch (IOException e) {
             testNetwork = true;
@@ -99,8 +104,10 @@ public class PalaceBungee extends Plugin {
         try {
             messageHandler = new MessageHandler();
             messageHandler.initialize();
-        } catch (IOException | TimeoutException e) {
-            e.printStackTrace();
+        } catch (IOException | TimeoutException | RuntimeException e) {
+            onDisable();
+            throw new IllegalStateException("Cannot enable PalaceBungee: RabbitMQ messaging failed. "
+                    + "Verify plugins/PalaceBungee/config.yml and broker virtual-host permissions.", e);
         }
 
         afkUtil = new AFKUtil();
@@ -120,6 +127,7 @@ public class PalaceBungee extends Plugin {
 
     @Override
     public void onDisable() {
+        if (serverUtil != null) serverUtil.shutdown();
         if (messageHandler != null) messageHandler.shutdown();
         if (mongoHandler != null) mongoHandler.stop();
         if (forumUtil != null) forumUtil.stop();

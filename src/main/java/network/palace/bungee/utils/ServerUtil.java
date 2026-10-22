@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.logging.Level;
 
 public class ServerUtil {
+    private final Timer updateTimer = new Timer();
     private final HashMap<String, Server> servers = new HashMap<>();
     private ServerInfo currentHub;
     @Getter private int onlineCount = 0;
@@ -44,7 +45,7 @@ public class ServerUtil {
             }
         });
 
-        new Timer().schedule(new TimerTask() {
+        updateTimer.schedule(new TimerTask() {
             @Override
             public void run() {
                 try {
@@ -82,6 +83,10 @@ public class ServerUtil {
                 }
             }
         }, 2000L, 5000L);
+    }
+
+    public void shutdown() {
+        updateTimer.cancel();
     }
 
     private void loadServers() {
