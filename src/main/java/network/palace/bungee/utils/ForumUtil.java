@@ -1,6 +1,5 @@
 package network.palace.bungee.utils;
 
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -24,25 +23,17 @@ public class ForumUtil {
     private Random random;
 
     public ForumUtil() throws IOException, SQLException, ClassNotFoundException {
-        Class.forName("org.sqlite.JDBC");
+        Class.forName("com.mysql.cj.jdbc.Driver");
         initialize();
     }
 
     public void initialize() throws IOException, SQLException {
-        HikariConfig config = new HikariConfig();
-        java.io.File file = new java.io.File(PalaceBungee.getConfigUtil().getConfig().getString("sqlite.forum-path", "palace-forum.sqlite")).getAbsoluteFile();
-        java.io.File parent = file.getParentFile();
-        if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("Cannot create " + parent);
-        config.setJdbcUrl("jdbc:sqlite:" + file.getAbsolutePath());
-        config.setMaximumPoolSize(1);
-        config.setConnectionInitSql("PRAGMA busy_timeout=10000");
-        connectionPool = new HikariDataSource(config);
-        try (Connection connection = connectionPool.getConnection(); java.sql.Statement statement = connection.createStatement()) {
-            statement.execute("PRAGMA journal_mode=WAL");
-            statement.execute("CREATE TABLE IF NOT EXISTS core_members (member_id INTEGER PRIMARY KEY, email TEXT UNIQUE, member_group_id INTEGER)");
-            statement.execute("CREATE TABLE IF NOT EXISTS core_pfields_content (member_id INTEGER PRIMARY KEY, field_2 TEXT, field_3 TEXT, field_4 TEXT)");
-        }
-
+        net.md_5.bungee.config.Configuration settings = PalaceBungee.getConfigUtil().getConfig();
+        String section = settings.get("forum-mysql") instanceof net.md_5.bungee.config.Configuration ? "forum-mysql" : "mysql";
+        network.palace.storage.MySQLSettings mysql = network.palace.storage.MySQLSettings.from(
+                key -> settings.get(key), section, "plugins/PalaceBungee/config.yml");
+        connectionPool = new HikariDataSource(mysql.poolConfig());
+        // Forum tables belong to the forum application; do not create or alter its schema here.
     }
 
     public boolean isConnected() {
