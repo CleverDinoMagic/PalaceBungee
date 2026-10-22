@@ -1,6 +1,7 @@
 package network.palace.bungee.mongo;
 
-import network.palace.storage.SQLiteStore;
+import network.palace.storage.MySQLStore;
+import network.palace.storage.MySQLSettings;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -23,8 +24,8 @@ import org.bson.types.ObjectId;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
+import java.io.File;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,7 +36,7 @@ import java.util.logging.Level;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class MongoHandler {
-    private final SQLiteStore client;
+    private final MySQLStore client;
     private final MongoCollection<Document> bansCollection;
     private final MongoCollection<Document> partyCollection;
     @Getter private final MongoCollection<Document> playerCollection;
@@ -51,7 +52,8 @@ public class MongoHandler {
     private final MongoCollection<Document> virtualQueuesCollection;
 
     public MongoHandler() throws IOException {
-        client = new SQLiteStore(new File(PalaceBungee.getConfigUtil().getConfig().getString("sqlite.path", "palace.sqlite")));
+        net.md_5.bungee.config.Configuration config = PalaceBungee.getConfigUtil().getConfig();
+        client = new MySQLStore(MySQLSettings.from(key -> config.get(key), "mysql", "plugins/PalaceBungee/config.yml"));
         MongoDatabase database = client.database();
         playerCollection = database.getCollection("players");
         chatCollection = database.getCollection("chat");

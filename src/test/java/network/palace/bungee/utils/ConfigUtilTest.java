@@ -34,6 +34,18 @@ public final class ConfigUtilTest {
             check(config.getString("sqlite.path").equals("/operator/shared.sqlite"), "Preserve SQLite path");
             check(config.getString("custom").equals("preserved"), "Preserve custom settings");
             check(Files.readString(file).contains("rabbitmq:"), "Legacy file must expose RabbitMQ fields");
+            check(config.getString("mysql.database").equals("palace"), "MySQL config placeholders added");
+            config.set("mysql.host", "mysql.example");
+            config.set("mysql.username", "operator");
+            config.set("mysql.password", "secret-value");
+            config.set("mysql.port", 3307);
+            final Configuration mysqlConfig = config;
+            ConfigUtil util = new ConfigUtil() {
+                @Override public Configuration getConfig() { return mysqlConfig; }
+            };
+            ConfigUtil.DatabaseConnection mysql = util.getMySQLInfo();
+            check(mysql.getHost().equals("mysql.example") && mysql.getPort() == 3307, "MySQL settings API");
+            check(util.getMongoDBInfo().getDatabase().equals("palace"), "Historical API must use MySQL settings");
             Files.writeString(file, "rabbitmq:\n  host: broker.example\n  username: operator\n  password: ' secret-value '\n  port: 5673\n  virtualhost: /palace\n");
             config = ConfigUtil.loadConfig(file.toFile());
             ConfigUtil.DatabaseConnection connection = ConfigUtil.readRabbitMQInfo(config);

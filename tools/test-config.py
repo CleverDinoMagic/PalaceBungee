@@ -19,10 +19,13 @@ if not classes.is_dir() or not jar.is_file():
     raise SystemExit('Build the plugins with Core/offline-build/build.sh first.')
 tests = root / 'work/config-tests'
 tests.mkdir(parents=True, exist_ok=True)
-cp = os.pathsep.join(map(str, [classes, *libs]))
+cp = os.pathsep.join(map(str, [classes, kit / "work/build/Storage", *libs]))
 subprocess.run([javac, '--release', '11', '-proc:none', '-cp', cp, '-d', str(tests),
                 *map(str, sorted((root / 'src/test/java').rglob('*.java')))], check=True)
 for artifact in (classes, jar):
-    cp = os.pathsep.join(map(str, [tests, artifact, *libs]))
+    runtime = [tests, artifact, *libs]
+    if artifact == classes:
+        runtime.insert(2, kit / "work/build/Storage")
+    cp = os.pathsep.join(map(str, runtime))
     for test in ('network.palace.bungee.utils.ConfigUtilTest', 'network.palace.bungee.messages.MessageHandlerTest'):
         subprocess.run([java, '-cp', cp, test], check=True)

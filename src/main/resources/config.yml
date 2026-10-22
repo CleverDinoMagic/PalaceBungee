@@ -1,8 +1,13 @@
 # PalaceBungee runs on your BungeeCord-compatible proxy.
 testNetwork: true
-sqlite:
-  path: palace.sqlite
-  forum-path: palace-forum.sqlite
+# Required: MySQL 8 server and an existing schema shared by Core and PalaceBungee.
+mysql:
+  host: ''
+  port: 3306
+  database: palace
+  username: ''
+  password: ''
+  ssl-mode: PREFERRED
 # Required: enter your existing broker credentials, then restart the proxy.
 # Use the same broker and virtual host as your Core servers.
 rabbitmq:

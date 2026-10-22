@@ -38,7 +38,7 @@ public class ConfigUtil {
         Configuration fileConfig = getConfig();
         boolean versionOverride;
         if (fileConfig.contains("versions")) {
-            PalaceBungee.getInstance().getLogger().warning("Bypassing MongoDB config for MC version settings due to file override");
+            PalaceBungee.getInstance().getLogger().warning("Bypassing database config for MC version settings due to file override");
             Configuration versions = fileConfig.getSection("versions");
             ProtocolConstants.setHighVersion(versions.getInt("maxVersion"), versions.getString("maxVersionText"));
             ProtocolConstants.setLowVersion(versions.getInt("minVersion"), versions.getString("minVersionText"));
@@ -116,24 +116,22 @@ public class ConfigUtil {
         return (String) value;
     }
 
-    public DatabaseConnection getMongoDBInfo() {
-        try {
-            Configuration config = getConfig().getSection("mongodb");
-            return new DatabaseConnection(config.getString("hostname"), config.getString("username"), config.getString("password"), config.getString("database"), 0);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new DatabaseConnection("", "", "", "", 0);
-        }
-    }
+    /** Historical API alias; all persistence now uses MySQL. */
+    @Deprecated
+    public DatabaseConnection getMongoDBInfo() { return getMySQLInfo(); }
 
-    public DatabaseConnection getSQLInfo() {
+    public DatabaseConnection getMySQLInfo() { return databaseInfo("mysql"); }
+
+    public DatabaseConnection getSQLInfo() { return databaseInfo("sql"); }
+
+    private DatabaseConnection databaseInfo(String section) {
         try {
-            Configuration config = getConfig().getSection("sql");
-            return new DatabaseConnection(config.getString("host"), config.getString("username"), config.getString("password"), config.getString("database"), config.getInt("port"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new DatabaseConnection("", "", "", "", 0);
-        }
+            Configuration config = getConfig();
+            if (!config.contains(section + ".host")) section = "mysql";
+            network.palace.storage.MySQLSettings.from(key -> config.get(key), section, "plugins/PalaceBungee/config.yml");
+            return new DatabaseConnection(config.getString(section + ".host"), config.getString(section + ".username"),
+                    config.getString(section + ".password"), config.getString(section + ".database"), config.getInt(section + ".port", 3306));
+        } catch (IOException e) { throw new IllegalStateException("Cannot read plugins/PalaceBungee/config.yml", e); }
     }
 
     public BungeeConfig getBungeeConfig() {
